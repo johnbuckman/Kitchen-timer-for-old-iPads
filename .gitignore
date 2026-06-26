@@ -1,0 +1,10 @@
+# Build artifacts from simrun.sh (simulator iteration)
+.simbuild/
+
+# macOS / Xcode cruft
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad/
