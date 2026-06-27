@@ -16,6 +16,14 @@ BUNDLE_ID="com.johnbuckman.KitchenTimer"
 
 [ -d "$SDK" ] || { echo "ERROR: iOS 9.3 SDK not found at $SDK"; exit 1; }
 
+# Prevent concurrent builds: the old-SDK classic linker can deadlock if two runs
+# write the same output. Atomic lock dir; auto-removed on exit.
+LOCK="${OUT}.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  echo "ERROR: another build-armv7 run is in progress (lock: $LOCK). Aborting."; exit 1
+fi
+trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+
 # --- Idempotent SDK fixups -------------------------------------------------
 # 1) libSystem re-exports liblaunch but the SDK omits its stub.
 if [ ! -f "$SDK/usr/lib/system/liblaunch.tbd" ]; then

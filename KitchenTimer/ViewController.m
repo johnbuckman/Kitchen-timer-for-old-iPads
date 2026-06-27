@@ -6,6 +6,7 @@
 #define DING_SOUND 1005   // "nice ding" alert tone (try 1013 / 1057 'Tink' to taste)
 #define DING_EVERY 5      // re-ding every N seconds while in overtime
 #define SCRUB_PTS_PER_MIN 7.0  // vertical points of drag per minute (smaller = faster)
+#define IDLE_LIMIT 3600        // seconds of no interaction before the screensaver shows (1 hour)
 
 @interface ViewController () <UIGestureRecognizerDelegate>
 {
@@ -34,6 +35,13 @@
     int      _dragStartMin[NCOUNT];
 
     BOOL _pulsing;   // YES while the overtime black<->white flash is running
+
+    // Idle / screensaver
+    int      _idleSeconds;
+    UIView  *_screensaver;
+    UILabel *_ssTime;
+    UILabel *_ssDay;
+    NSDateFormatter *_dayFmt;
 }
 @end
 
@@ -47,6 +55,9 @@
 
     _clockFmt = [[NSDateFormatter alloc] init];
     _clockFmt.dateFormat = @"H:mm";
+
+    _dayFmt = [[NSDateFormatter alloc] init];
+    _dayFmt.dateFormat = @"EEEE";   // full weekday name, e.g. "Monday"
 
     for (int i = 0; i < NCOUNT; i++) {
         _cdSetMin[i] = 5;
@@ -125,6 +136,49 @@
     grid.spacing = 18;
     [grid setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisVertical];
     [root addArrangedSubview:grid];
+
+    [self buildScreensaver];   // full-screen overlay, on top, hidden until idle
+}
+
+- (void)buildScreensaver {
+    _screensaver = [[UIView alloc] init];
+    _screensaver.backgroundColor = [UIColor blackColor];
+    _screensaver.hidden = YES;
+    _screensaver.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:_screensaver];
+
+    _ssTime = [[UILabel alloc] init];
+    _ssTime.font = [UIFont monospacedDigitSystemFontOfSize:240 weight:UIFontWeightBold];
+    _ssTime.textColor = [UIColor whiteColor];
+    _ssTime.textAlignment = NSTextAlignmentCenter;
+    _ssTime.adjustsFontSizeToFitWidth = YES;
+    _ssTime.minimumScaleFactor = 0.2;
+    _ssTime.translatesAutoresizingMaskIntoConstraints = NO;
+    [_screensaver addSubview:_ssTime];
+
+    _ssDay = [[UILabel alloc] init];
+    _ssDay.font = [UIFont systemFontOfSize:64 weight:UIFontWeightMedium];
+    _ssDay.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+    _ssDay.textAlignment = NSTextAlignmentCenter;
+    _ssDay.translatesAutoresizingMaskIntoConstraints = NO;
+    [_screensaver addSubview:_ssDay];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_screensaver.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [_screensaver.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [_screensaver.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [_screensaver.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+        // Time spans the width (so it auto-shrinks to fit), nudged up so the day sits below.
+        [_ssTime.leadingAnchor constraintEqualToAnchor:_screensaver.leadingAnchor constant:24],
+        [_ssTime.trailingAnchor constraintEqualToAnchor:_screensaver.trailingAnchor constant:-24],
+        [_ssTime.centerYAnchor constraintEqualToAnchor:_screensaver.centerYAnchor constant:-44],
+        [_ssDay.topAnchor constraintEqualToAnchor:_ssTime.bottomAnchor constant:4],
+        [_ssDay.centerXAnchor constraintEqualToAnchor:_screensaver.centerXAnchor],
+    ]];
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
+        initWithTarget:self action:@selector(screensaverTapped)];
+    [_screensaver addGestureRecognizer:tap];
 }
 
 - (UIStackView *)gridRow:(NSArray *)cards {
@@ -265,6 +319,7 @@
 
 - (void)cdScrub:(UILongPressGestureRecognizer *)g {
     int i = (int)g.view.tag;
+    [self resetIdle];
     if (_cdRunning[i]) return;   // only adjust a stopped timer, same as the +/- buttons
     CGPoint p = [g locationInView:g.view];
     if (g.state == UIGestureRecognizerStateBegan) {
@@ -290,6 +345,7 @@
 - (UIColor *)blueColor  { return [UIColor colorWithRed:0.20 green:0.45 blue:0.70 alpha:1.0]; }
 - (UIColor *)grayColor  { return [UIColor colorWithWhite:0.32 alpha:1.0]; }
 - (UIColor *)orangeColor{ return [UIColor colorWithRed:1.0 green:0.55 blue:0.0 alpha:1.0]; }
+- (UIColor *)dimColor   { return [UIColor colorWithWhite:0.5 alpha:1.0]; }   // inactive time text
 
 #pragma mark - Tick
 
@@ -311,12 +367,25 @@
         }
     }
     [self updatePulse];
+
+    // --- idle / screensaver ---
+    _idleSeconds++;
+    BOOL overtime = NO;
+    for (int i = 0; i < NCOUNT; i++)
+        if (_cdRunning[i] && _cdRemaining[i] <= 0) overtime = YES;
+    if (!_screensaver.hidden) {
+        if (overtime) [self hideScreensaver];   // never hide a firing alarm
+        else [self updateScreensaver];
+    } else if (_idleSeconds >= IDLE_LIMIT && !overtime) {
+        [self showScreensaver];
+    }
 }
 
 #pragma mark - Stopwatch actions
 
 - (void)swToggle:(UIButton *)b {
     int i = (int)b.tag;
+    [self resetIdle];
     _swRunning[i] = !_swRunning[i];
     [b setTitle:(_swRunning[i] ? @"Stop" : @"Up") forState:UIControlStateNormal];
     b.backgroundColor = _swRunning[i] ? [self redColor] : [self greenColor];
@@ -325,6 +394,7 @@
 
 - (void)swReset:(UIButton *)b {
     int i = (int)b.tag;
+    [self resetIdle];
     _swRunning[i] = NO;
     _swSeconds[i] = 0;
     [_swToggle[i] setTitle:@"Up" forState:UIControlStateNormal];
@@ -336,6 +406,7 @@
 
 - (void)cdPlus:(UIButton *)b {
     int i = (int)b.tag;
+    [self resetIdle];
     if (_cdRunning[i]) return;
     if (_cdSetMin[i] < CD_MAX_MIN) _cdSetMin[i]++;
     _cdRemaining[i] = _cdSetMin[i] * 60;
@@ -344,6 +415,7 @@
 
 - (void)cdMinus:(UIButton *)b {
     int i = (int)b.tag;
+    [self resetIdle];
     if (_cdRunning[i]) return;
     if (_cdSetMin[i] > 0) _cdSetMin[i]--;
     _cdRemaining[i] = _cdSetMin[i] * 60;
@@ -352,6 +424,7 @@
 
 - (void)cdToggle:(UIButton *)b {
     int i = (int)b.tag;
+    [self resetIdle];
     if (!_cdRunning[i]) {
         if (_cdRemaining[i] <= 0) _cdRemaining[i] = _cdSetMin[i] * 60;
         if (_cdRemaining[i] <= 0) return;
@@ -369,6 +442,7 @@
 
 - (void)cdReset:(UIButton *)b {
     int i = (int)b.tag;
+    [self resetIdle];
     _cdRunning[i] = NO;
     _cdRemaining[i] = _cdSetMin[i] * 60;
     [_cdToggle[i] setTitle:@"Down" forState:UIControlStateNormal];
@@ -392,15 +466,18 @@
 
 - (void)refreshStopwatch:(int)i {
     _swValue[i].text = [self mmss:_swSeconds[i]];
+    // Grey while inactive, white while running.
+    _swValue[i].textColor = _swRunning[i] ? [UIColor whiteColor] : [self dimColor];
     // Reset only matters once it's running or has counted something.
     _swReset[i].hidden = (!_swRunning[i] && _swSeconds[i] == 0);
 }
 
 - (void)refreshCountdown:(int)i {
     _cdValue[i].text = [self mmss:_cdRemaining[i]];
-    // Orange once at/under zero so the overtime number stays readable on the grey card
-    // regardless of the pulsing background behind it.
-    _cdValue[i].textColor = (_cdRemaining[i] <= 0) ? [self orangeColor] : [UIColor whiteColor];
+    // Grey while inactive; white while running; orange while running past zero (alarm).
+    if (!_cdRunning[i])              _cdValue[i].textColor = [self dimColor];
+    else if (_cdRemaining[i] <= 0)   _cdValue[i].textColor = [self orangeColor];
+    else                             _cdValue[i].textColor = [UIColor whiteColor];
     // Reset only matters once it's running or no longer at its freshly-set value.
     _cdReset[i].hidden = (!_cdRunning[i] && _cdRemaining[i] == _cdSetMin[i] * 60);
 }
@@ -434,6 +511,36 @@
 - (void)stopPulse {
     [self.view.layer removeAllAnimations];
     self.view.backgroundColor = [UIColor blackColor];
+}
+
+#pragma mark - Screensaver / idle
+
+// Any interaction (button, scrub, or a tap on empty space / the screensaver) calls this.
+- (void)resetIdle {
+    _idleSeconds = 0;
+    if (_screensaver && !_screensaver.hidden) [self hideScreensaver];
+}
+
+- (void)showScreensaver {
+    [self updateScreensaver];
+    _screensaver.hidden = NO;
+    [self.view bringSubviewToFront:_screensaver];
+}
+
+- (void)hideScreensaver { _screensaver.hidden = YES; }
+
+- (void)updateScreensaver {
+    NSDate *now = [NSDate date];
+    _ssTime.text = [_clockFmt stringFromDate:now];
+    _ssDay.text  = [_dayFmt stringFromDate:now];
+}
+
+- (void)screensaverTapped { [self resetIdle]; }
+
+// Catches taps on empty space / cards (button taps reset idle in their own handlers).
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    [self resetIdle];
+    [super touchesBegan:touches withEvent:event];
 }
 
 @end
