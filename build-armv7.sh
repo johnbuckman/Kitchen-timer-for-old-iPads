@@ -73,8 +73,17 @@ cat > "$APP/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>1</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>9.0</string>
+  <key>CFBundleSupportedPlatforms</key><array><string>iPhoneOS</string></array>
+  <key>DTPlatformName</key><string>iphoneos</string>
+  <key>DTPlatformVersion</key><string>9.3</string>
+  <key>DTSDKName</key><string>iphoneos9.3</string>
   <key>UIDeviceFamily</key><array><integer>2</integer></array>
   <key>UIRequiredDeviceCapabilities</key><array><string>armv7</string></array>
+  <key>CFBundleIconFiles</key><array><string>Icon-76.png</string><string>Icon-76@2x.png</string></array>
+  <key>CFBundleIcons~ipad</key>
+  <dict><key>CFBundlePrimaryIcon</key><dict>
+    <key>CFBundleIconFiles</key><array><string>Icon-76</string></array>
+  </dict></dict>
   <key>UIStatusBarHidden</key><true/>
   <key>UISupportedInterfaceOrientations~ipad</key>
   <array>
@@ -85,6 +94,9 @@ cat > "$APP/Info.plist" <<PLIST
   </array>
 </dict></plist>
 PLIST
+
+# --- App icon (so it's identifiable on the home screen) --------------------
+cp "$SRC/Icon-76.png" "$SRC/Icon-76@2x.png" "$APP/" 2>/dev/null || echo "(no icon PNGs found - skipping)"
 
 # --- Pseudo-sign for a jailbroken device -----------------------------------
 ldid -S "$APP/KitchenTimer"

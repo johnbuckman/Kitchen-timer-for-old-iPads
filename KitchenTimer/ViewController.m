@@ -46,7 +46,7 @@
     self.view.backgroundColor = [UIColor blackColor];
 
     _clockFmt = [[NSDateFormatter alloc] init];
-    _clockFmt.dateFormat = @"HH:mm:ss";
+    _clockFmt.dateFormat = @"H:mm";
 
     for (int i = 0; i < NCOUNT; i++) {
         _cdSetMin[i] = 5;
