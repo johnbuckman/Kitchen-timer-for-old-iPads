@@ -106,8 +106,11 @@ PLIST
 # --- App icon (so it's identifiable on the home screen) --------------------
 cp "$SRC/Icon-76.png" "$SRC/Icon-76@2x.png" "$APP/" 2>/dev/null || echo "(no icon PNGs found - skipping)"
 
-# --- Pseudo-sign for a jailbroken device -----------------------------------
-ldid -S "$APP/KitchenTimer"
+# --- Pseudo-sign with entitlements so SpringBoard/FrontBoard will launch it.
+# platform-application + no-container = treat as a system app (no App Store
+# container). Without this, FrontBoard kills third-party apps at launch.
+ENTS="$(dirname "$0")/KitchenTimer.entitlements"
+ldid -S"$ENTS" "$APP/KitchenTimer"
 
 echo "BUILT + SIGNED: $APP"
 file "$APP/KitchenTimer"

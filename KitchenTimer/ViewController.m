@@ -14,6 +14,7 @@
     NSDateFormatter *_clockFmt;
 
     UILabel *_clock;
+    UILabel *_dayMain;   // weekday under the clock (grey, smaller)
 
     // Stopwatches (count UP, displayed in whole minutes)
     int      _swSeconds[NCOUNT];
@@ -77,6 +78,24 @@
 
 - (BOOL)prefersStatusBarHidden { return YES; }
 
+// Per-orientation tweaks: the weekday word's vertical nudge, and the clock size.
+- (void)viewWillLayoutSubviews {
+    [super viewWillLayoutSubviews];
+    if (!_dayMain || !_clock) return;
+    BOOL landscape = self.view.bounds.size.width > self.view.bounds.size.height;
+
+    // Weekday word: visual nudge only (down 20px landscape, up 50px portrait).
+    CGFloat dy = landscape ? 20.0 : -50.0;
+    _dayMain.transform = CGAffineTransformMakeTranslation(0, dy);
+
+    // Clock: 50% larger in portrait (162pt) than landscape (108pt). Guard so we don't
+    // re-invalidate layout every pass.
+    CGFloat clockSize = landscape ? 108.0 : 162.0;
+    if (_clock.font.pointSize != clockSize) {
+        _clock.font = [UIFont monospacedDigitSystemFontOfSize:clockSize weight:UIFontWeightBold];
+    }
+}
+
 #pragma mark - UI construction
 
 - (void)buildUI {
@@ -95,34 +114,45 @@
         [root.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:-24],
     ]];
 
-    // --- Clock in a dark "pill" so it stays readable while the background pulses ---
+    // --- Clock (+ weekday) in a dark "pill" so it stays readable while the bg pulses ---
     _clock = [[UILabel alloc] init];
     _clock.font = [UIFont monospacedDigitSystemFontOfSize:108 weight:UIFontWeightBold];
     _clock.textColor = [UIColor whiteColor];
     _clock.textAlignment = NSTextAlignmentCenter;
-    _clock.text = @"--:--:--";
-    _clock.translatesAutoresizingMaskIntoConstraints = NO;
+    _clock.text = @"--:--";
+
+    _dayMain = [[UILabel alloc] init];   // weekday, grey + smaller, under the time
+    _dayMain.font = [UIFont systemFontOfSize:34 weight:UIFontWeightMedium];
+    _dayMain.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
+    _dayMain.textAlignment = NSTextAlignmentCenter;
+    _dayMain.text = @"";
+
+    UIStackView *clockStack = [[UIStackView alloc] initWithArrangedSubviews:@[ _clock, _dayMain ]];
+    clockStack.axis = UILayoutConstraintAxisVertical;
+    clockStack.alignment = UIStackViewAlignmentCenter;
+    clockStack.spacing = -6;   // tuck the weekday up close under the big time
+    clockStack.translatesAutoresizingMaskIntoConstraints = NO;
 
     UIView *pill = [[UIView alloc] init];
     pill.backgroundColor = [UIColor blackColor];   // invisible on the black bg; a black pill during the white pulse
-    pill.layer.cornerRadius = 70;   // == half the pill height -> stadium/pill shape
+    pill.layer.cornerRadius = 32;   // rounded-rect backing behind the time + weekday
     pill.translatesAutoresizingMaskIntoConstraints = NO;
-    [pill addSubview:_clock];
+    [pill addSubview:clockStack];
 
     UIView *clockRow = [[UIView alloc] init];   // full-width row that centers the pill
     [clockRow addSubview:pill];
     [clockRow setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
 
     [NSLayoutConstraint activateConstraints:@[
-        [pill.heightAnchor constraintEqualToConstant:140],
         [pill.centerXAnchor constraintEqualToAnchor:clockRow.centerXAnchor],
         [pill.topAnchor constraintEqualToAnchor:clockRow.topAnchor],
         [pill.bottomAnchor constraintEqualToAnchor:clockRow.bottomAnchor],
         [pill.leadingAnchor constraintGreaterThanOrEqualToAnchor:clockRow.leadingAnchor],
         [pill.trailingAnchor constraintLessThanOrEqualToAnchor:clockRow.trailingAnchor],
-        [_clock.leadingAnchor constraintEqualToAnchor:pill.leadingAnchor constant:44],
-        [_clock.trailingAnchor constraintEqualToAnchor:pill.trailingAnchor constant:-44],
-        [_clock.centerYAnchor constraintEqualToAnchor:pill.centerYAnchor],
+        [clockStack.leadingAnchor constraintEqualToAnchor:pill.leadingAnchor constant:48],
+        [clockStack.trailingAnchor constraintEqualToAnchor:pill.trailingAnchor constant:-48],
+        [clockStack.topAnchor constraintEqualToAnchor:pill.topAnchor constant:14],
+        [clockStack.bottomAnchor constraintEqualToAnchor:pill.bottomAnchor constant:-18],
     ]];
     [root addArrangedSubview:clockRow];
 
@@ -350,7 +380,9 @@
 #pragma mark - Tick
 
 - (void)tick {
-    _clock.text = [_clockFmt stringFromDate:[NSDate date]];
+    NSDate *now = [NSDate date];
+    _clock.text   = [_clockFmt stringFromDate:now];
+    _dayMain.text = [_dayFmt stringFromDate:now];
 
     for (int i = 0; i < NCOUNT; i++) {
         if (_swRunning[i]) { _swSeconds[i]++; [self refreshStopwatch:i]; }
@@ -407,7 +439,14 @@
 - (void)cdPlus:(UIButton *)b {
     int i = (int)b.tag;
     [self resetIdle];
-    if (_cdRunning[i]) return;
+    if (_cdRunning[i]) {
+        // Running: add a minute to the time remaining (cap at CD_MAX_MIN).
+        _cdRemaining[i] += 60;
+        if (_cdRemaining[i] > CD_MAX_MIN * 60) _cdRemaining[i] = CD_MAX_MIN * 60;
+        [self refreshCountdown:i];
+        [self updatePulse];   // +1 min may pull it back out of overtime -> stop the flash
+        return;
+    }
     if (_cdSetMin[i] < CD_MAX_MIN) _cdSetMin[i]++;
     _cdRemaining[i] = _cdSetMin[i] * 60;
     [self refreshCountdown:i];
@@ -416,7 +455,14 @@
 - (void)cdMinus:(UIButton *)b {
     int i = (int)b.tag;
     [self resetIdle];
-    if (_cdRunning[i]) return;
+    if (_cdRunning[i]) {
+        // Running: take a minute off the time remaining (floor at 0, don't force overtime).
+        _cdRemaining[i] -= 60;
+        if (_cdRemaining[i] < 0) _cdRemaining[i] = 0;
+        [self refreshCountdown:i];
+        [self updatePulse];
+        return;
+    }
     if (_cdSetMin[i] > 0) _cdSetMin[i]--;
     _cdRemaining[i] = _cdSetMin[i] * 60;
     [self refreshCountdown:i];
