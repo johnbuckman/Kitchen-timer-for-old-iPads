@@ -9,3 +9,6 @@ build/
 xcuserdata/
 *.xcuserdatad/
 .build-armv7/
+
+# Mac Catalyst build output
+build-catalyst/

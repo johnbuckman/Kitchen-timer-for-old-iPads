@@ -30,6 +30,28 @@ cat > "$APP/Info.plist" <<'PLIST'
   <key>MinimumOSVersion</key><string>12.0</string>
   <key>UIDeviceFamily</key><array><integer>2</integer></array>
   <key>UIStatusBarHidden</key><true/>
+  <key>UILaunchScreen</key><dict/>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key><false/>
+    <key>UISceneConfigurations</key>
+    <dict>
+      <key>UIWindowSceneSessionRoleApplication</key>
+      <array>
+        <dict>
+          <key>UISceneConfigurationName</key><string>Default</string>
+          <key>UISceneDelegateClassName</key><string>SceneDelegate</string>
+        </dict>
+      </array>
+    </dict>
+  </dict>
 </dict></plist>
 PLIST
 

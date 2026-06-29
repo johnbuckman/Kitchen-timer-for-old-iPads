@@ -15,6 +15,9 @@
     UILabel *_clock;
     UILabel *_dayMain;   // weekday under the clock (grey, smaller)
     UIStackView *_clockStack;   // [clock, day] — spacing tuned per orientation
+    UIView   *_clockRow;        // top row holding the clock pill
+    UIStackView *_topRow, *_botRow;          // the two grid rows
+    NSLayoutConstraint *_topRowH, *_botRowH; // their heights (computed each layout)
 
     // Stopwatches (count UP)
     int      _swSeconds[NCOUNT];
@@ -119,23 +122,26 @@
     }
 }
 
+// Size the two grid rows so they fill from below the clock to the bottom (constant heights
+// are honored where relational fill constraints aren't, on iOS 26).
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    if (!_topRowH || !_clockRow) return;
+    CGFloat avail = self.view.bounds.size.height - 24 - 24;     // top + bottom insets
+    CGFloat clockH = CGRectGetHeight(_clockRow.frame);
+    CGFloat rowH = (avail - clockH - 18 - 18) / 2.0;            // two 18pt gaps
+    if (rowH > 40 && fabs(_topRowH.constant - rowH) > 0.5) {
+        _topRowH.constant = rowH;
+        _botRowH.constant = rowH;
+    }
+}
+
 #pragma mark - UI construction
 
 - (void)buildUI {
-    UIStackView *root = [[UIStackView alloc] init];
-    root.axis = UILayoutConstraintAxisVertical;
-    root.alignment = UIStackViewAlignmentFill;
-    root.distribution = UIStackViewDistributionFill;
-    root.spacing = 18;
-    root.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:root];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [root.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
-        [root.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
-        [root.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:24],
-        [root.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor constant:-24],
-    ]];
+    // The clock row sits at the top and the 2x2 grid fills everything below it, pinned to
+    // the bottom — explicit constraints (a UIStackView left the grid un-stretched, bunching
+    // everything in the vertical center with big empty bands on tall screens).
 
     // --- Clock (+ weekday) in a dark "pill" so it stays readable while the bg pulses ---
     _clock = [[UILabel alloc] init];
@@ -168,33 +174,47 @@
     [pill addGestureRecognizer:[[UITapGestureRecognizer alloc]
         initWithTarget:self action:@selector(clockTapped)]];
 
-    UIView *clockRow = [[UIView alloc] init];   // full-width row that centers the pill
-    [clockRow addSubview:pill];
-    [clockRow setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
+    _clockRow = [[UIView alloc] init];   // full-width row that centers the pill
+    [_clockRow addSubview:pill];
+    [_clockRow setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
+    _clockRow.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:_clockRow];
 
     [NSLayoutConstraint activateConstraints:@[
-        [pill.centerXAnchor constraintEqualToAnchor:clockRow.centerXAnchor],
-        [pill.topAnchor constraintEqualToAnchor:clockRow.topAnchor],
-        [pill.bottomAnchor constraintEqualToAnchor:clockRow.bottomAnchor],
-        [pill.leadingAnchor constraintGreaterThanOrEqualToAnchor:clockRow.leadingAnchor],
-        [pill.trailingAnchor constraintLessThanOrEqualToAnchor:clockRow.trailingAnchor],
+        [pill.centerXAnchor constraintEqualToAnchor:_clockRow.centerXAnchor],
+        [pill.topAnchor constraintEqualToAnchor:_clockRow.topAnchor],
+        [pill.bottomAnchor constraintEqualToAnchor:_clockRow.bottomAnchor],
+        [pill.leadingAnchor constraintGreaterThanOrEqualToAnchor:_clockRow.leadingAnchor],
+        [pill.trailingAnchor constraintLessThanOrEqualToAnchor:_clockRow.trailingAnchor],
         [_clockStack.leadingAnchor constraintEqualToAnchor:pill.leadingAnchor constant:48],
         [_clockStack.trailingAnchor constraintEqualToAnchor:pill.trailingAnchor constant:-48],
         [_clockStack.topAnchor constraintEqualToAnchor:pill.topAnchor constant:14],
         [_clockStack.bottomAnchor constraintEqualToAnchor:pill.bottomAnchor constant:-18],
     ]];
-    [root addArrangedSubview:clockRow];
 
-    // --- 2x2 grid that fills the remaining space ---
-    UIStackView *topRow = [self gridRow:@[ [self stopwatchCard:0], [self stopwatchCard:1] ]];
-    UIStackView *botRow = [self gridRow:@[ [self countdownCard:0], [self countdownCard:1] ]];
+    // --- 2x2 grid. Two equal rows, heights computed each layout in viewDidLayoutSubviews
+    // (relational "fill" constraints don't stretch the rows on iOS 26; constant heights do).
+    _topRow = [self gridRow:@[ [self stopwatchCard:0], [self stopwatchCard:1] ]];
+    _botRow = [self gridRow:@[ [self countdownCard:0], [self countdownCard:1] ]];
+    _topRow.translatesAutoresizingMaskIntoConstraints = NO;
+    _botRow.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:_topRow];
+    [self.view addSubview:_botRow];
 
-    UIStackView *grid = [[UIStackView alloc] initWithArrangedSubviews:@[ topRow, botRow ]];
-    grid.axis = UILayoutConstraintAxisVertical;
-    grid.distribution = UIStackViewDistributionFillEqually;
-    grid.spacing = 18;
-    [grid setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisVertical];
-    [root addArrangedSubview:grid];
+    _topRowH = [_topRow.heightAnchor constraintEqualToConstant:200];
+    _botRowH = [_botRow.heightAnchor constraintEqualToConstant:200];
+    [NSLayoutConstraint activateConstraints:@[
+        [_clockRow.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:24],
+        [_clockRow.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
+        [_clockRow.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
+        [_topRow.topAnchor constraintEqualToAnchor:_clockRow.bottomAnchor constant:18],
+        [_topRow.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
+        [_topRow.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
+        [_botRow.topAnchor constraintEqualToAnchor:_topRow.bottomAnchor constant:18],
+        [_botRow.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
+        [_botRow.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
+        _topRowH, _botRowH,
+    ]];
 
     [self buildScreensaver];   // full-screen overlay, on top, hidden until idle
 }
@@ -273,6 +293,9 @@
     row.axis = UILayoutConstraintAxisHorizontal;
     row.distribution = UIStackViewDistributionFillEqually;
     row.spacing = 18;
+    // Let the row be stretched vertically to fill (otherwise its high default hugging
+    // resists the fill-to-bottom constraint and the layout bunches in the center).
+    [row setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisVertical];
     return row;
 }
 

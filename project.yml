@@ -32,6 +32,13 @@ targets:
         UILaunchScreen: {}        # empty default launch screen -> full-screen on modern iOS
         UIStatusBarHidden: true
         UIRequiresFullScreen: true
+        # Modern scene lifecycle so the window tracks the real screen size/orientation.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: SceneDelegate
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationPortraitUpsideDown
@@ -43,3 +50,6 @@ targets:
         TARGETED_DEVICE_FAMILY: "2"     # iPad
         CODE_SIGN_STYLE: Automatic
         # DEVELOPMENT_TEAM intentionally left unset: pick your Apple ID team in Xcode.
+        # Mac Catalyst: run the same UIKit app natively on macOS.
+        SUPPORTS_MACCATALYST: YES
+        MACOSX_DEPLOYMENT_TARGET: "11.0"
