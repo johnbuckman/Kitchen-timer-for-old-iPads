@@ -3,163 +3,190 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BB000000000000000000A001 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000A001 /* main.m */; };
-		BB000000000000000000A003 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000A003 /* AppDelegate.m */; };
-		BB000000000000000000A005 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = FF000000000000000000A005 /* ViewController.m */; };
+		0194B2FCC3B43D15222264D1 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 79AB712DBFDE090DC6A06A48 /* main.m */; };
+		0A6BE8E21C431ED4B306AD17 /* Icon-76@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05EE68DEB09153932FA415C /* Icon-76@2x.png */; };
+		191E83F68D27F7D64A45A022 /* Icon-76.png in Resources */ = {isa = PBXBuildFile; fileRef = B45F9568F1D289C3604FC6B8 /* Icon-76.png */; };
+		34C647FFFA4FF56AA7CB6022 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 73883DB0EDB981FBC7A2224F /* AppDelegate.m */; };
+		368B865B7556BEE806325E2A /* decent_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 435B0AD4A5BF0CBD3D0FA90D /* decent_logo.png */; };
+		51E2E283982CCF3BE84DAB5F /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A786CA5AFE4772ADA1237D78 /* ViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		FF0000000000000000000AFF /* KitchenTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KitchenTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FF000000000000000000A001 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		FF000000000000000000A002 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		FF000000000000000000A003 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		FF000000000000000000A004 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		FF000000000000000000A005 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
-		FF000000000000000000A006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		11AC723C9527591C2FD2786E /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "App-Info.plist"; sourceTree = "<group>"; };
+		435B0AD4A5BF0CBD3D0FA90D /* decent_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = decent_logo.png; sourceTree = "<group>"; };
+		702652D8E14CFEEF70783E64 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		73883DB0EDB981FBC7A2224F /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		7949C430891CC9522082F9B7 /* KitchenTimer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KitchenTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		79AB712DBFDE090DC6A06A48 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		8AF5D486587E1A69D4E5A74D /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		A786CA5AFE4772ADA1237D78 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		B45F9568F1D289C3604FC6B8 /* Icon-76.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Icon-76.png"; sourceTree = "<group>"; };
+		D05EE68DEB09153932FA415C /* Icon-76@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Icon-76@2x.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		PH000000000000000000A002 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
-
 /* Begin PBXGroup section */
-		GG000000000000000000A000 = {
+		53E6F4AF7EE7315469528549 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				GG000000000000000000A010 /* KitchenTimer */,
-				GG000000000000000000A011 /* Products */,
+				7949C430891CC9522082F9B7 /* KitchenTimer.app */,
 			);
+			name = Products;
 			sourceTree = "<group>";
 		};
-		GG000000000000000000A010 /* KitchenTimer */ = {
+		C34D1E08B05B404191B61CFC /* KitchenTimer */ = {
 			isa = PBXGroup;
 			children = (
-				FF000000000000000000A002 /* AppDelegate.h */,
-				FF000000000000000000A003 /* AppDelegate.m */,
-				FF000000000000000000A004 /* ViewController.h */,
-				FF000000000000000000A005 /* ViewController.m */,
-				FF000000000000000000A001 /* main.m */,
-				FF000000000000000000A006 /* Info.plist */,
+				11AC723C9527591C2FD2786E /* App-Info.plist */,
+				8AF5D486587E1A69D4E5A74D /* AppDelegate.h */,
+				73883DB0EDB981FBC7A2224F /* AppDelegate.m */,
+				435B0AD4A5BF0CBD3D0FA90D /* decent_logo.png */,
+				B45F9568F1D289C3604FC6B8 /* Icon-76.png */,
+				D05EE68DEB09153932FA415C /* Icon-76@2x.png */,
+				79AB712DBFDE090DC6A06A48 /* main.m */,
+				702652D8E14CFEEF70783E64 /* ViewController.h */,
+				A786CA5AFE4772ADA1237D78 /* ViewController.m */,
 			);
 			path = KitchenTimer;
 			sourceTree = "<group>";
 		};
-		GG000000000000000000A011 /* Products */ = {
+		F069BA6BFF2648CC4EC3D940 = {
 			isa = PBXGroup;
 			children = (
-				FF0000000000000000000AFF /* KitchenTimer.app */,
+				C34D1E08B05B404191B61CFC /* KitchenTimer */,
+				53E6F4AF7EE7315469528549 /* Products */,
 			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		TT000000000000000000A001 /* KitchenTimer */ = {
+		BC1F6DAD9FBFF22ED10611C1 /* KitchenTimer */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CL000000000000000000A002 /* Build configuration list for PBXNativeTarget "KitchenTimer" */;
+			buildConfigurationList = 62E89D4342127251C0508BE9 /* Build configuration list for PBXNativeTarget "KitchenTimer" */;
 			buildPhases = (
-				PH000000000000000000A001 /* Sources */,
-				PH000000000000000000A002 /* Frameworks */,
-				PH000000000000000000A003 /* Resources */,
+				DF7142EFEC14AFD1DFF6CE87 /* Sources */,
+				20655DD4A79A795F4C064CBC /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = KitchenTimer;
+			packageProductDependencies = (
+			);
 			productName = KitchenTimer;
-			productReference = FF0000000000000000000AFF /* KitchenTimer.app */;
+			productReference = 7949C430891CC9522082F9B7 /* KitchenTimer.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		PJ000000000000000000A001 /* Project object */ = {
+		C0C150B4A51FD3D3DF29A791 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1010;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
 				TargetAttributes = {
-					TT000000000000000000A001 = {
-						CreatedOnToolsVersion = 10.1;
+					BC1F6DAD9FBFF22ED10611C1 = {
 						ProvisioningStyle = Automatic;
 					};
 				};
 			};
-			buildConfigurationList = CL000000000000000000A001 /* Build configuration list for PBXProject "KitchenTimer" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = CD0BE496111D4356DD225E63 /* Build configuration list for PBXProject "KitchenTimer" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
 				Base,
+				en,
 			);
-			mainGroup = GG000000000000000000A000;
-			productRefGroup = GG000000000000000000A011 /* Products */;
+			mainGroup = F069BA6BFF2648CC4EC3D940;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 53E6F4AF7EE7315469528549 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				TT000000000000000000A001 /* KitchenTimer */,
+				BC1F6DAD9FBFF22ED10611C1 /* KitchenTimer */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		PH000000000000000000A003 /* Resources */ = {
+		20655DD4A79A795F4C064CBC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				191E83F68D27F7D64A45A022 /* Icon-76.png in Resources */,
+				0A6BE8E21C431ED4B306AD17 /* Icon-76@2x.png in Resources */,
+				368B865B7556BEE806325E2A /* decent_logo.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		PH000000000000000000A001 /* Sources */ = {
+		DF7142EFEC14AFD1DFF6CE87 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BB000000000000000000A005 /* ViewController.m in Sources */,
-				BB000000000000000000A003 /* AppDelegate.m in Sources */,
-				BB000000000000000000A001 /* main.m in Sources */,
+				34C647FFFA4FF56AA7CB6022 /* AppDelegate.m in Sources */,
+				51E2E283982CCF3BE84DAB5F /* ViewController.m in Sources */,
+				0194B2FCC3B43D15222264D1 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		CF000000000000000000A001 /* Debug */ = {
+		4630ED2085EBE981BD5AD01A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
 					"$(inherited)",
+					"DEBUG=1",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -167,26 +194,55 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				ONLY_ACTIVE_ARCH = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				VALID_ARCHS = armv7;
-				ARCHS = armv7;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
-		CF000000000000000000A002 /* Release */ = {
+		60B275C6523B8A5AB410B78F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -197,42 +253,48 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				ONLY_ACTIVE_ARCH = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = armv7;
-				ARCHS = armv7;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
-		CF000000000000000000A003 /* Debug */ = {
+		D718DDB6FF427E53DD698706 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_FILE = KitchenTimer/Info.plist;
+				INFOPLIST_FILE = "KitchenTimer/App-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.johnbuckman.KitchenTimer;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Debug;
 		};
-		CF000000000000000000A004 /* Release */ = {
+		E841162C3E3734564118126D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_FILE = KitchenTimer/Info.plist;
+				INFOPLIST_FILE = "KitchenTimer/App-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.johnbuckman.KitchenTimer;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Release;
@@ -240,25 +302,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CL000000000000000000A001 /* Build configuration list for PBXProject "KitchenTimer" */ = {
+		62E89D4342127251C0508BE9 /* Build configuration list for PBXNativeTarget "KitchenTimer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				CF000000000000000000A001 /* Debug */,
-				CF000000000000000000A002 /* Release */,
+				D718DDB6FF427E53DD698706 /* Debug */,
+				E841162C3E3734564118126D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
-		CL000000000000000000A002 /* Build configuration list for PBXNativeTarget "KitchenTimer" */ = {
+		CD0BE496111D4356DD225E63 /* Build configuration list for PBXProject "KitchenTimer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				CF000000000000000000A003 /* Debug */,
-				CF000000000000000000A004 /* Release */,
+				4630ED2085EBE981BD5AD01A /* Debug */,
+				60B275C6523B8A5AB410B78F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = PJ000000000000000000A001 /* Project object */;
+	rootObject = C0C150B4A51FD3D3DF29A791 /* Project object */;
 }

@@ -59,7 +59,7 @@ fi
 rm -rf "$OUT"; mkdir -p "$APP"
 xcrun clang -arch armv7 -isysroot "$SDK" -miphoneos-version-min=9.0 -fobjc-arc \
   -Wl,-ld_classic \
-  -framework UIKit -framework Foundation -framework AudioToolbox \
+  -framework UIKit -framework Foundation -framework AudioToolbox -framework CoreGraphics \
   "$SRC/main.m" "$SRC/AppDelegate.m" "$SRC/ViewController.m" \
   -o "$APP/KitchenTimer" 2>&1 | grep -viE "tbd file|iOS Simulator|-ld_classic is deprecated" || true
 
@@ -105,6 +105,7 @@ PLIST
 
 # --- App icon (so it's identifiable on the home screen) --------------------
 cp "$SRC/Icon-76.png" "$SRC/Icon-76@2x.png" "$APP/" 2>/dev/null || echo "(no icon PNGs found - skipping)"
+cp "$SRC/decent_logo.png" "$APP/" 2>/dev/null || echo "(no decent_logo.png - skipping)"
 
 # --- Pseudo-sign with entitlements so SpringBoard/FrontBoard will launch it.
 # platform-application + no-container = treat as a system app (no App Store

@@ -39,6 +39,8 @@ xcrun --sdk iphonesimulator clang \
   "$SRC/main.m" "$SRC/AppDelegate.m" "$SRC/ViewController.m" \
   -o "$APP/KitchenTimer"
 
+cp "$SRC/decent_logo.png" "$APP/" 2>/dev/null || echo "(no decent_logo.png - skipping)"
+
 xcrun simctl boot "$UDID" 2>/dev/null || true
 open -a Simulator
 xcrun simctl bootstatus "$UDID" -b
