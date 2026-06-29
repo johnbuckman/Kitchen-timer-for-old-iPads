@@ -149,6 +149,10 @@
     _clock.textColor = [UIColor whiteColor];
     _clock.textAlignment = NSTextAlignmentCenter;
     _clock.text = @"--:--";
+    // Shrink the time to fit rather than truncate it on narrow screens (e.g. the iPad mini 1
+    // in portrait, where 162pt was too wide).
+    _clock.adjustsFontSizeToFitWidth = YES;
+    _clock.minimumScaleFactor = 0.4;
 
     // Weekday: grey, a quarter the clock's size (size set per orientation in
     // viewWillLayoutSubviews). 27 = a quarter of the 108pt landscape clock.
@@ -157,6 +161,8 @@
     _dayMain.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
     _dayMain.textAlignment = NSTextAlignmentCenter;
     _dayMain.text = [_dayFmt stringFromDate:[NSDate date]];   // non-empty at first layout
+    _dayMain.adjustsFontSizeToFitWidth = YES;
+    _dayMain.minimumScaleFactor = 0.4;
 
     // Time + weekday stacked in the pill; spacing tuned per orientation in viewWillLayoutSubviews.
     _clockStack = [[UIStackView alloc] initWithArrangedSubviews:@[ _clock, _dayMain ]];

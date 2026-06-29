@@ -13,9 +13,11 @@
 		34C647FFFA4FF56AA7CB6022 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 73883DB0EDB981FBC7A2224F /* AppDelegate.m */; };
 		368B865B7556BEE806325E2A /* decent_logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 435B0AD4A5BF0CBD3D0FA90D /* decent_logo.png */; };
 		51E2E283982CCF3BE84DAB5F /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A786CA5AFE4772ADA1237D78 /* ViewController.m */; };
+		8FCB1A0555CBABECDB2D3D19 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0EBED2DE4A0DD5E4815B898A /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0EBED2DE4A0DD5E4815B898A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		11AC723C9527591C2FD2786E /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "App-Info.plist"; sourceTree = "<group>"; };
 		435B0AD4A5BF0CBD3D0FA90D /* decent_logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = decent_logo.png; sourceTree = "<group>"; };
 		702652D8E14CFEEF70783E64 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 				11AC723C9527591C2FD2786E /* App-Info.plist */,
 				8AF5D486587E1A69D4E5A74D /* AppDelegate.h */,
 				73883DB0EDB981FBC7A2224F /* AppDelegate.m */,
+				0EBED2DE4A0DD5E4815B898A /* Assets.xcassets */,
 				435B0AD4A5BF0CBD3D0FA90D /* decent_logo.png */,
 				B45F9568F1D289C3604FC6B8 /* Icon-76.png */,
 				D05EE68DEB09153932FA415C /* Icon-76@2x.png */,
@@ -92,6 +95,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					BC1F6DAD9FBFF22ED10611C1 = {
+						DevelopmentTeam = XLS3XF57J8;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -120,6 +124,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FCB1A0555CBABECDB2D3D19 /* Assets.xcassets in Resources */,
 				191E83F68D27F7D64A45A022 /* Icon-76.png in Resources */,
 				0A6BE8E21C431ED4B306AD17 /* Icon-76@2x.png in Resources */,
 				368B865B7556BEE806325E2A /* decent_logo.png in Resources */,
@@ -194,7 +199,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -253,7 +258,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -271,13 +276,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = XLS3XF57J8;
 				INFOPLIST_FILE = "KitchenTimer/App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Decent Timer";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.johnbuckman.KitchenTimer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.decentespresso.kitchentimer;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = YES;
 				TARGETED_DEVICE_FAMILY = 2;
@@ -290,13 +297,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = XLS3XF57J8;
 				INFOPLIST_FILE = "KitchenTimer/App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Decent Timer";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.johnbuckman.KitchenTimer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.decentespresso.kitchentimer;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = YES;
 				TARGETED_DEVICE_FAMILY = 2;

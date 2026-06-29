@@ -22,7 +22,7 @@ cat > "$APP/Info.plist" <<'PLIST'
   <key>CFBundleIdentifier</key><string>com.johnbuckman.KitchenTimer</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>KitchenTimer</string>
-  <key>CFBundleDisplayName</key><string>Kitchen Timer</string>
+  <key>CFBundleDisplayName</key><string>Decent Timer</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>CFBundleVersion</key><string>1</string>
