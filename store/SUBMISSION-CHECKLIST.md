@@ -1,13 +1,13 @@
 # Decent Timer — App Store submission checklist
 
 Everything in the repo is ready (iOS 15 target, name "Decent Timer", bundle id
-`com.decentespresso.kitchentimer`, team `XLS3XF57J8`, app icon, screenshots, listing copy).
+`com.decentespresso.kitchentimer`, app icon, screenshots, listing copy).
 The steps below are the ones that must happen interactively in Xcode / App Store Connect
 under the Decent Espresso account.
 
 ## 0. One-time, in Xcode (Settings → Accounts)
-- Make sure the **Decent Espresso (Vid Tadel) Apple ID** is signed in, with the
-  **XLS3XF57J8** team available. The project already sets that team + automatic signing.
+- Make sure your **Apple Developer account** is signed in and your team is available.
+  Select your team under Signing & Capabilities (the project uses automatic signing).
 
 ## 1. Create the app record — App Store Connect (appstoreconnect.apple.com)
 - My Apps → ➕ → New App

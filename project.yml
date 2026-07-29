@@ -49,7 +49,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.decentespresso.kitchentimer
         TARGETED_DEVICE_FAMILY: "2"     # iPad
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: XLS3XF57J8    # Decent Espresso (Vid Tadel) Apple Developer team
+        DEVELOPMENT_TEAM: ""            # set your own Apple Developer team in Xcode (Signing & Capabilities)
         INFOPLIST_KEY_CFBundleDisplayName: Decent Timer
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Mac Catalyst: run the same UIKit app natively on macOS.
