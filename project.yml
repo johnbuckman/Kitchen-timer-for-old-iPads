@@ -13,8 +13,8 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: "1.1"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "1.2"
+    CURRENT_PROJECT_VERSION: "3"
 targets:
   KitchenTimer:
     type: application
@@ -27,8 +27,8 @@ targets:
       path: KitchenTimer/App-Info.plist
       properties:
         CFBundleDisplayName: Decent Timer
-        CFBundleShortVersionString: "1.1"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "1.2"
+        CFBundleVersion: "3"
         UILaunchScreen: {}        # empty default launch screen -> full-screen on modern iOS
         UIStatusBarHidden: true
         UIRequiresFullScreen: true

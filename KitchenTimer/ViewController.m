@@ -18,6 +18,9 @@
     UIView   *_clockRow;        // top row holding the clock pill
     UIStackView *_topRow, *_botRow;          // the two grid rows
     NSLayoutConstraint *_topRowH, *_botRowH; // their heights (computed each layout)
+    NSArray *_gridConstraints;               // grid row position constraints (rebuilt on rotate)
+    int _gridLand;                           // orientation the grid was last built for (-1 = none)
+    NSLayoutConstraint *_pillPadTop, *_pillPadBot;  // clock pill padding (tightened when compact)
 
     // Stopwatches (count UP)
     int      _swSeconds[NCOUNT];
@@ -102,24 +105,51 @@
 
 - (BOOL)prefersStatusBarHidden { return YES; }
 
+// iPhone (compact) gets a smaller clock + tighter margins so the timer grid has room.
+// Catalyst/iPad report Pad/Mac, so they keep the original large layout.
+- (BOOL)isPhone { return UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone; }
+- (BOOL)landscape { return self.view.bounds.size.width > self.view.bounds.size.height; }
+// Phone landscape lays each card out horizontally (compact height); everything else is the
+// vertical card layout.
+- (BOOL)phoneLandscape { return self.isPhone && self.landscape; }
+// The compact portrait treatment (small clock, tighter margins, stacked count-down card) is
+// used everywhere EXCEPT iPad-landscape, which keeps the roomy inline layout. So: any phone
+// orientation, plus iPad portrait.
+- (BOOL)compact { return self.isPhone || !self.landscape; }
+
 // Per-orientation tweak: the clock + weekday sizes.
 - (void)viewWillLayoutSubviews {
     [super viewWillLayoutSubviews];
     if (!_dayMain || !_clock) return;
     BOOL landscape = self.view.bounds.size.width > self.view.bounds.size.height;
 
-    // Portrait's bigger clock has more internal leading, so tuck the weekday up tighter there.
-    _clockStack.spacing = landscape ? -6.0 : -34.0;
+    BOOL compact = self.compact;   // true everywhere except iPad-landscape
+
+    // Compact (small) clock + tighter pill padding — everywhere but iPad-landscape.
+    if (_pillPadTop) _pillPadTop.constant = compact ? 7 : 14;
+    if (_pillPadBot) _pillPadBot.constant = compact ? -9 : -18;
+
+    // Compact clock is scaled down to free space for the grid — 2/3 size in portrait, 1/3 in
+    // the tight landscape. The negative weekday spacing scales with the font's internal leading.
+    CGFloat compactDiv = landscape ? 3.0 : 1.5;
+    CGFloat spacing = landscape ? -6.0 : -34.0;
+    if (compact) spacing /= compactDiv;
+    _clockStack.spacing = spacing;
 
     if (_unitKeys) [self updateKeypadUnitFont];   // keypad hours/min/sec font per orientation
 
-    // Clock: 108pt landscape / 162pt portrait. The weekday tracks at a quarter the clock
-    // size. Guard so we don't re-invalidate layout every pass.
+    // Clock: 108pt landscape / 162pt portrait at full size (iPad-landscape); scaled down in the
+    // compact treatment. Weekday tracks at a quarter the clock size.
     CGFloat clockSize = landscape ? 108.0 : 162.0;
+    if (compact) clockSize /= compactDiv;
     if (_clock.font.pointSize != clockSize) {
         _clock.font   = [UIFont monospacedDigitSystemFontOfSize:clockSize weight:UIFontWeightBold];
         _dayMain.font = [UIFont monospacedDigitSystemFontOfSize:clockSize / 4.0 weight:UIFontWeightBold];
     }
+
+    // Rebuild the grid when the orientation flips: the cards switch between the vertical layout
+    // (portrait/iPad) and the compact horizontal layout (phone-landscape).
+    if (_topRow && _gridLand != (landscape ? 1 : 0)) [self installGrid];
 }
 
 // Size the two grid rows so they fill from below the clock to the bottom (constant heights
@@ -127,12 +157,25 @@
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     if (!_topRowH || !_clockRow) return;
-    CGFloat avail = self.view.bounds.size.height - 24 - 24;     // top + bottom insets
+    BOOL phone = self.isPhone;
+    BOOL portrait = self.view.bounds.size.height >= self.view.bounds.size.width;
+    // Respect the safe area on phone — the clock row hangs off safeArea.top, so the grid must
+    // subtract those insets or the bottom row spills off under the home indicator/cutout.
+    CGFloat topPad = 24 + (phone ? self.view.safeAreaInsets.top : 0);
+    CGFloat botPad = 24 + (phone ? self.view.safeAreaInsets.bottom : 0);
+    CGFloat avail = self.view.bounds.size.height - topPad - botPad;
     CGFloat clockH = CGRectGetHeight(_clockRow.frame);
     CGFloat rowH = (avail - clockH - 18 - 18) / 2.0;            // two 18pt gaps
-    if (rowH > 40 && fabs(_topRowH.constant - rowH) > 0.5) {
-        _topRowH.constant = rowH;
-        _botRowH.constant = rowH;
+    // Compact portrait (iPhone, and iPad portrait): count-up (top) needs less room than
+    // count-down, so shrink it by 1/6 and hand that height to the count-down row (total same).
+    CGFloat topH = rowH, botH = rowH;
+    if (self.compact && portrait) {
+        topH = rowH * 5.0 / 6.0;
+        botH = rowH * 7.0 / 6.0;
+    }
+    if (rowH > 40 && (fabs(_topRowH.constant - topH) > 0.5 || fabs(_botRowH.constant - botH) > 0.5)) {
+        _topRowH.constant = topH;
+        _botRowH.constant = botH;
     }
 }
 
@@ -186,6 +229,10 @@
     _clockRow.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:_clockRow];
 
+    // Padding around the time inside the pill — tightened in the compact treatment,
+    // updated per orientation in viewWillLayoutSubviews.
+    _pillPadTop = [_clockStack.topAnchor constraintEqualToAnchor:pill.topAnchor constant:(self.compact ? 7 : 14)];
+    _pillPadBot = [_clockStack.bottomAnchor constraintEqualToAnchor:pill.bottomAnchor constant:(self.compact ? -9 : -18)];
     [NSLayoutConstraint activateConstraints:@[
         [pill.centerXAnchor constraintEqualToAnchor:_clockRow.centerXAnchor],
         [pill.topAnchor constraintEqualToAnchor:_clockRow.topAnchor],
@@ -194,12 +241,32 @@
         [pill.trailingAnchor constraintLessThanOrEqualToAnchor:_clockRow.trailingAnchor],
         [_clockStack.leadingAnchor constraintEqualToAnchor:pill.leadingAnchor constant:48],
         [_clockStack.trailingAnchor constraintEqualToAnchor:pill.trailingAnchor constant:-48],
-        [_clockStack.topAnchor constraintEqualToAnchor:pill.topAnchor constant:14],
-        [_clockStack.bottomAnchor constraintEqualToAnchor:pill.bottomAnchor constant:-18],
+        _pillPadTop, _pillPadBot,
     ]];
 
-    // --- 2x2 grid. Two equal rows, heights computed each layout in viewDidLayoutSubviews
-    // (relational "fill" constraints don't stretch the rows on iOS 26; constant heights do).
+    // Clock row position (built once). On phone, hang it off the safe-area top so it clears the
+    // camera cutout; the sides use the safe area too so cards don't slide under the cutout in
+    // landscape. iPad/Catalyst have no cutout so use the raw edges.
+    NSLayoutXAxisAnchor *clead  = self.isPhone ? self.view.safeAreaLayoutGuide.leadingAnchor  : self.view.leadingAnchor;
+    NSLayoutXAxisAnchor *ctrail = self.isPhone ? self.view.safeAreaLayoutGuide.trailingAnchor : self.view.trailingAnchor;
+    [NSLayoutConstraint activateConstraints:@[
+        [_clockRow.topAnchor constraintEqualToAnchor:(self.isPhone ? self.view.safeAreaLayoutGuide.topAnchor : self.view.topAnchor) constant:24],
+        [_clockRow.leadingAnchor constraintEqualToAnchor:clead constant:28],
+        [_clockRow.trailingAnchor constraintEqualToAnchor:ctrail constant:-28],
+    ]];
+
+    _gridLand = -1;
+    [self installGrid];        // builds the 2x2 grid for the current orientation (rebuilt on rotate)
+    [self buildScreensaver];   // full-screen overlay, on top, hidden until idle
+}
+
+// (Re)build the two grid rows for the current orientation. The cards lay themselves out
+// vertically in portrait and horizontally in phone-landscape, so a rotation rebuilds them.
+- (void)installGrid {
+    if (_gridConstraints) { [NSLayoutConstraint deactivateConstraints:_gridConstraints]; _gridConstraints = nil; }
+    [_topRow removeFromSuperview];
+    [_botRow removeFromSuperview];
+
     _topRow = [self gridRow:@[ [self stopwatchCard:0], [self stopwatchCard:1] ]];
     _botRow = [self gridRow:@[ [self countdownCard:0], [self countdownCard:1] ]];
     _topRow.translatesAutoresizingMaskIntoConstraints = NO;
@@ -207,22 +274,23 @@
     [self.view addSubview:_topRow];
     [self.view addSubview:_botRow];
 
+    NSLayoutXAxisAnchor *lead  = self.isPhone ? self.view.safeAreaLayoutGuide.leadingAnchor  : self.view.leadingAnchor;
+    NSLayoutXAxisAnchor *trail = self.isPhone ? self.view.safeAreaLayoutGuide.trailingAnchor : self.view.trailingAnchor;
     _topRowH = [_topRow.heightAnchor constraintEqualToConstant:200];
     _botRowH = [_botRow.heightAnchor constraintEqualToConstant:200];
-    [NSLayoutConstraint activateConstraints:@[
-        [_clockRow.topAnchor constraintEqualToAnchor:self.view.topAnchor constant:24],
-        [_clockRow.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
-        [_clockRow.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
+    _gridConstraints = @[
         [_topRow.topAnchor constraintEqualToAnchor:_clockRow.bottomAnchor constant:18],
-        [_topRow.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
-        [_topRow.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
+        [_topRow.leadingAnchor constraintEqualToAnchor:lead constant:28],
+        [_topRow.trailingAnchor constraintEqualToAnchor:trail constant:-28],
         [_botRow.topAnchor constraintEqualToAnchor:_topRow.bottomAnchor constant:18],
-        [_botRow.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:28],
-        [_botRow.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-28],
+        [_botRow.leadingAnchor constraintEqualToAnchor:lead constant:28],
+        [_botRow.trailingAnchor constraintEqualToAnchor:trail constant:-28],
         _topRowH, _botRowH,
-    ]];
-
-    [self buildScreensaver];   // full-screen overlay, on top, hidden until idle
+    ];
+    [NSLayoutConstraint activateConstraints:_gridConstraints];
+    _gridLand = self.landscape ? 1 : 0;
+    if (_screensaver) [self.view bringSubviewToFront:_screensaver];   // keep overlay on top after a rebuild
+    [self refreshAll];         // repopulate the freshly-built labels
 }
 
 - (void)buildScreensaver {
@@ -335,7 +403,8 @@
 
 - (UILabel *)bigValueLabel {
     UILabel *l = [[UILabel alloc] init];
-    l.font = [UIFont monospacedDigitSystemFontOfSize:84 weight:UIFontWeightBold];
+    // Smaller in phone-landscape, where the time sits on one short horizontal row.
+    l.font = [UIFont monospacedDigitSystemFontOfSize:(self.phoneLandscape ? 44 : 84) weight:UIFontWeightBold];
     l.textColor = [UIColor whiteColor];
     l.textAlignment = NSTextAlignmentCenter;
     l.adjustsFontSizeToFitWidth = YES;
@@ -355,8 +424,60 @@
     b.layer.cornerRadius = 12;
     b.tag = tag;
     [b addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
-    [b.heightAnchor constraintGreaterThanOrEqualToConstant:64].active = YES;
+    // Low floor in phone-landscape so stacked half-height buttons (the −/+ column) can fit;
+    // the full-height Up/Down buttons stretch well past this via their stack's Fill alignment.
+    [b.heightAnchor constraintGreaterThanOrEqualToConstant:(self.phoneLandscape ? 32 : 64)].active = YES;
     return b;
+}
+
+// --- Phone-landscape card building blocks ---
+// Normal button width, the 50%-wider Up width, and the −/+ column width.
+static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
+
+// Left column of a landscape card: the title stacked over the time, taking the horizontal slack.
+- (UIStackView *)leftColTitle:(UIView *)title value:(UIView *)value {
+    UIStackView *col = [[UIStackView alloc] initWithArrangedSubviews:@[ title, value ]];
+    col.axis = UILayoutConstraintAxisVertical;
+    col.alignment = UIStackViewAlignmentFill;
+    col.distribution = UIStackViewDistributionFill;
+    col.spacing = 2;
+    return col;
+}
+
+// A landscape card row: a stretchy left column followed by fixed-width tail views. Fill
+// alignment makes every tail view span the full card height.
+- (UIStackView *)landRow:(UIView *)leftCol tail:(NSArray *)tail widths:(NSArray *)widths {
+    NSMutableArray *views = [NSMutableArray arrayWithObject:leftCol];
+    [views addObjectsFromArray:tail];
+    UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:views];
+    row.axis = UILayoutConstraintAxisHorizontal;
+    row.alignment = UIStackViewAlignmentFill;
+    row.distribution = UIStackViewDistributionFill;
+    row.spacing = 10;
+    [leftCol setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisHorizontal];
+    for (NSUInteger k = 0; k < tail.count; k++) {
+        UIView *b = tail[k];
+        [b setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        [b.widthAnchor constraintEqualToConstant:[widths[k] doubleValue]].active = YES;
+    }
+    return row;
+}
+
+// Vertical −/+ column: + on top, − underneath, equal heights.
+- (UIStackView *)pmColumn:(int)i {
+    UIStackView *col = [[UIStackView alloc] initWithArrangedSubviews:@[ _cdPlusBtn[i], _cdMinusBtn[i] ]];
+    col.axis = UILayoutConstraintAxisVertical;
+    col.alignment = UIStackViewAlignmentFill;
+    col.distribution = UIStackViewDistributionFillEqually;   // equal heights
+    col.spacing = 8;
+    return col;
+}
+
+- (UIView *)wrapCard:(UIStackView *)content tag:(int)tag {
+    UIView *card = [self cardContainer:content];
+    card.tag = tag;
+    [self addKeypadTapTo:card];
+    return card;
 }
 
 - (UIStackView *)buttonRow:(NSArray *)buttons {
@@ -365,7 +486,10 @@
     row.distribution = UIStackViewDistributionFillEqually;
     row.spacing = 14;
     // Fixed, tall tap targets — and keeps every card's action row identical height.
-    [row.heightAnchor constraintEqualToConstant:78].active = YES;
+    // Shorter in phone-landscape, where vertical room is scarce.
+    // Shorter rows where vertical room is scarce: phone-landscape, and compact portrait (the
+    // bigger clock leaves the 4-row count-down card less height).
+    [row.heightAnchor constraintEqualToConstant:(self.phoneLandscape ? 54 : (self.compact ? 60 : 78))].active = YES;
     [row setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
     return row;
 }
@@ -379,6 +503,17 @@
                             color:[self grayColor] action:@selector(swReset:) tag:i fontSize:26];
 
     _swTitle[i] = [self cardTitle:@"Count up"];
+    if (self.phoneLandscape) {
+        // Landscape: a left column (title over time) beside a full-height Up button — so Up
+        // spans both the title and time rows. Up is 50% wider than a normal button; Reset
+        // (only visible while running) sits just left of it, also full height.
+        _swValue[i].textAlignment = NSTextAlignmentLeft;
+        _swTitle[i].textAlignment = NSTextAlignmentLeft;
+        UIStackView *content = [self landRow:[self leftColTitle:_swTitle[i] value:_swValue[i]]
+                                        tail:@[ _swReset[i], _swToggle[i] ]
+                                      widths:@[ @(kLandBtnW), @(kLandWideW) ]];
+        return [self wrapCard:content tag:i];
+    }
     UIStackView *content = [[UIStackView alloc] initWithArrangedSubviews:@[
         _swTitle[i],
         _swValue[i],
@@ -386,12 +521,8 @@
     content.axis = UILayoutConstraintAxisVertical;
     content.alignment = UIStackViewAlignmentFill;
     content.distribution = UIStackViewDistributionFill;
-    content.spacing = 14;
-
-    UIView *card = [self cardContainer:content];
-    card.tag = i;   // stopwatch i  (countdown cards use 100+i)
-    [self addKeypadTapTo:card];
-    return card;
+    content.spacing = self.phoneLandscape ? 8 : (self.compact ? 10 : 14);
+    return [self wrapCard:content tag:i];
 }
 
 - (UIView *)countdownCard:(int)i {
@@ -399,22 +530,21 @@
 
     // TouchUpInside -> cdHoldEnd (a normal tap is one ±1 step from the TouchDown handler,
     // then this stops the hold). TouchDown begins the step + auto-repeat.
+    BOOL compact = self.compact;   // stacked cards (portrait + phone); false only for iPad-landscape
     _cdMinusBtn[i] = [self bigButton:@"–" color:[self grayColor] action:@selector(cdHoldEnd:) tag:i fontSize:42];
     _cdPlusBtn[i]  = [self bigButton:@"+" color:[self grayColor] action:@selector(cdHoldEnd:) tag:i fontSize:42];
     for (UIButton *b in @[ _cdMinusBtn[i], _cdPlusBtn[i] ]) {
-        [b.widthAnchor constraintGreaterThanOrEqualToConstant:72].active = YES;
-        [b setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        // iPad-landscape sits the −/+ inline beside the number, so give them a sane minimum
+        // width and hug tightly. The compact layouts give them their own row/column instead,
+        // where a 72pt minimum would overflow — so skip it there.
+        if (!compact) {
+            [b.widthAnchor constraintGreaterThanOrEqualToConstant:72].active = YES;
+            [b setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
+        }
         [b addTarget:self action:@selector(cdHoldBegin:) forControlEvents:UIControlEventTouchDown];
         [b addTarget:self action:@selector(cdHoldEnd:)
             forControlEvents:(UIControlEventTouchUpOutside | UIControlEventTouchCancel)];
     }
-
-    UIStackView *setRow = [[UIStackView alloc] initWithArrangedSubviews:@[ _cdMinusBtn[i], _cdValue[i], _cdPlusBtn[i] ]];
-    setRow.axis = UILayoutConstraintAxisHorizontal;
-    setRow.alignment = UIStackViewAlignmentCenter;   // keep -/+ a sane size; let the number be big
-    setRow.distribution = UIStackViewDistributionFill;
-    setRow.spacing = 14;
-    [setRow setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisVertical];
 
     _cdToggle[i] = [self bigButton:@"Down"
                              color:[self blueColor] action:@selector(cdToggle:) tag:i fontSize:26];
@@ -422,19 +552,44 @@
                             color:[self grayColor] action:@selector(cdReset:) tag:i fontSize:26];
 
     _cdTitle[i] = [self cardTitle:@"Count down"];
-    UIStackView *content = [[UIStackView alloc] initWithArrangedSubviews:@[
-        _cdTitle[i],
-        setRow,
-        [self buttonRow:@[ _cdToggle[i], _cdReset[i] ]] ]];
+
+    if (self.phoneLandscape) {
+        // Landscape: left column (title over time), then a full-height Down button, then the
+        // − / + column (+ on top, − underneath, equal heights) to the right of Down.
+        _cdValue[i].textAlignment = NSTextAlignmentLeft;
+        _cdTitle[i].textAlignment = NSTextAlignmentLeft;
+        UIStackView *content = [self landRow:[self leftColTitle:_cdTitle[i] value:_cdValue[i]]
+                                        tail:@[ _cdReset[i], _cdToggle[i], [self pmColumn:i] ]
+                                      widths:@[ @(kLandBtnW), @(kLandBtnW), @(kLandPMW) ]];
+        return [self wrapCard:content tag:100 + i];
+    }
+
+    UIStackView *content;
+    if (compact) {
+        // Compact portrait (iPhone + iPad portrait): the time gets its own full-width line
+        // (auto-shrinks to fit, like the stopwatch card), with − / + in their own equal-width
+        // row, then Down/Reset.
+        content = [[UIStackView alloc] initWithArrangedSubviews:@[
+            _cdTitle[i], _cdValue[i],
+            [self buttonRow:@[ _cdMinusBtn[i], _cdPlusBtn[i] ]],
+            [self buttonRow:@[ _cdToggle[i], _cdReset[i] ]] ]];
+    } else {
+        UIStackView *setRow = [[UIStackView alloc] initWithArrangedSubviews:@[ _cdMinusBtn[i], _cdValue[i], _cdPlusBtn[i] ]];
+        setRow.axis = UILayoutConstraintAxisHorizontal;
+        setRow.alignment = UIStackViewAlignmentCenter;   // keep -/+ a sane size; let the number be big
+        setRow.distribution = UIStackViewDistributionFill;
+        setRow.spacing = 14;
+        [setRow setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisVertical];
+        // Keep − and + the same width (the number between them absorbs the slack).
+        [_cdPlusBtn[i].widthAnchor constraintEqualToAnchor:_cdMinusBtn[i].widthAnchor].active = YES;
+        content = [[UIStackView alloc] initWithArrangedSubviews:@[
+            _cdTitle[i], setRow, [self buttonRow:@[ _cdToggle[i], _cdReset[i] ]] ]];
+    }
     content.axis = UILayoutConstraintAxisVertical;
     content.alignment = UIStackViewAlignmentFill;
     content.distribution = UIStackViewDistributionFill;
-    content.spacing = 14;
-
-    UIView *card = [self cardContainer:content];
-    card.tag = 100 + i;   // countdown i  (stopwatch cards use i)
-    [self addKeypadTapTo:card];
-    return card;
+    content.spacing = self.phoneLandscape ? 8 : (self.compact ? 10 : 14);
+    return [self wrapCard:content tag:100 + i];
 }
 
 // Tap the card body (not a button) to open the keypad; buttons keep their normal taps.
@@ -634,6 +789,9 @@
         : @"Count up";
     // Reset only matters once it's running or has counted something.
     _swReset[i].hidden = (!_swRunning[i] && _swSeconds[i] == 0);
+    // Toggle label/colour tracks running state (so a rebuild on rotation restores it).
+    [_swToggle[i] setTitle:(_swRunning[i] ? @"Stop" : @"Up") forState:UIControlStateNormal];
+    _swToggle[i].backgroundColor = _swRunning[i] ? [self redColor] : [self greenColor];
 }
 
 - (void)refreshCountdown:(int)i {
@@ -653,6 +811,9 @@
     }
     // Reset only matters once it's running or no longer at its freshly-set value.
     _cdReset[i].hidden = (!_cdRunning[i] && _cdRemaining[i] == _cdSetSec[i]);
+    // Toggle label/colour tracks running state (so a rebuild on rotation restores it).
+    [_cdToggle[i] setTitle:(_cdRunning[i] ? @"Stop" : @"Down") forState:UIControlStateNormal];
+    _cdToggle[i].backgroundColor = _cdRunning[i] ? [self redColor] : [self blueColor];
 }
 
 #pragma mark - Overtime pulse
