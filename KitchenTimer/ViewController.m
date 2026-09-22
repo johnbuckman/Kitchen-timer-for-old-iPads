@@ -57,6 +57,10 @@
     int          _keypadKind;   // 0 = count-up (stopwatch), 1 = count-down
     int          _keypadIndex;
     NSArray     *_unitKeys;     // the hours/minutes/seconds keys (font shrinks in landscape)
+    NSMutableArray *_digitKeys; // the digit/':'/'.'/⌫ keys
+    NSArray     *_kpActions;    // Cancel / Done
+    UIStackView *_kpOuter;      // keypad outer stack (spacing shrinks in landscape)
+    NSLayoutConstraint *_kpDisplayH, *_kpBottomH, *_kpTop, *_kpBottom;  // resized per orientation
 
     BOOL _pulsing;   // YES while the overtime black<->white flash is running
 
@@ -391,12 +395,15 @@
 - (UILabel *)cardTitle:(NSString *)text {
     UILabel *l = [[UILabel alloc] init];
     l.text = text;
-    l.font = [UIFont systemFontOfSize:22 weight:UIFontWeightSemibold];
+    l.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     l.textColor = [UIColor colorWithWhite:0.6 alpha:1.0];
     l.textAlignment = NSTextAlignmentCenter;
-    l.adjustsFontSizeToFitWidth = YES;   // the running "started at … ETA …" text is long
-    l.minimumScaleFactor = 0.45;
-    l.numberOfLines = 1;
+    // The running "Started at … , ETA …" text is long — let it wrap onto a 2nd line rather than
+    // truncating, and only shrink if two lines still don't fit.
+    l.numberOfLines = 2;
+    l.lineBreakMode = NSLineBreakByWordWrapping;
+    l.adjustsFontSizeToFitWidth = YES;
+    l.minimumScaleFactor = 0.4;
     [l setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
     return l;
 }
@@ -408,7 +415,7 @@
     l.textColor = [UIColor whiteColor];
     l.textAlignment = NSTextAlignmentCenter;
     l.adjustsFontSizeToFitWidth = YES;
-    l.minimumScaleFactor = 0.4;
+    l.minimumScaleFactor = 0.3;   // shrink hard rather than truncate the time to "…"
     [l setContentHuggingPriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisVertical];
     return l;
 }
@@ -420,6 +427,13 @@
     [b setTitle:title forState:UIControlStateNormal];
     [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     b.titleLabel.font = [UIFont systemFontOfSize:fs weight:UIFontWeightSemibold];
+    // Shrink the label to fit a narrow button (e.g. "Stop"/"Reset" when a running timer shows
+    // both) rather than truncating it to "…".
+    b.titleLabel.adjustsFontSizeToFitWidth = YES;
+    b.titleLabel.minimumScaleFactor = 0.4;
+    b.titleLabel.numberOfLines = 1;
+    b.titleLabel.lineBreakMode = NSLineBreakByClipping;
+    b.contentEdgeInsets = UIEdgeInsetsMake(2, 4, 2, 4);   // give the title the button's full width
     b.backgroundColor = color;
     b.layer.cornerRadius = 12;
     b.tag = tag;
@@ -463,9 +477,10 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     return row;
 }
 
-// Vertical −/+ column: + on top, − underneath, equal heights.
-- (UIStackView *)pmColumn:(int)i {
-    UIStackView *col = [[UIStackView alloc] initWithArrangedSubviews:@[ _cdPlusBtn[i], _cdMinusBtn[i] ]];
+// Vertical column of equal-height buttons (used for −/+ and for toggle-over-Reset in landscape).
+// A hidden button (e.g. Reset when idle) collapses, so a lone toggle fills the whole height.
+- (UIStackView *)vColumn:(NSArray *)btns {
+    UIStackView *col = [[UIStackView alloc] initWithArrangedSubviews:btns];
     col.axis = UILayoutConstraintAxisVertical;
     col.alignment = UIStackViewAlignmentFill;
     col.distribution = UIStackViewDistributionFillEqually;   // equal heights
@@ -509,9 +524,11 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
         // (only visible while running) sits just left of it, also full height.
         _swValue[i].textAlignment = NSTextAlignmentLeft;
         _swTitle[i].textAlignment = NSTextAlignmentLeft;
+        // One column: Up full-height when idle; Up-over-Reset (equal halves) while running. This
+        // keeps Reset from eating a whole extra column and squeezing the time out.
         UIStackView *content = [self landRow:[self leftColTitle:_swTitle[i] value:_swValue[i]]
-                                        tail:@[ _swReset[i], _swToggle[i] ]
-                                      widths:@[ @(kLandBtnW), @(kLandWideW) ]];
+                                        tail:@[ [self vColumn:@[ _swToggle[i], _swReset[i] ]] ]
+                                      widths:@[ @(kLandWideW) ]];
         return [self wrapCard:content tag:i];
     }
     UIStackView *content = [[UIStackView alloc] initWithArrangedSubviews:@[
@@ -558,9 +575,12 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
         // − / + column (+ on top, − underneath, equal heights) to the right of Down.
         _cdValue[i].textAlignment = NSTextAlignmentLeft;
         _cdTitle[i].textAlignment = NSTextAlignmentLeft;
+        // Down column (Down full-height, or Down-over-Reset while running) then the +/− column,
+        // so the time keeps its space instead of being crowded to nothing.
         UIStackView *content = [self landRow:[self leftColTitle:_cdTitle[i] value:_cdValue[i]]
-                                        tail:@[ _cdReset[i], _cdToggle[i], [self pmColumn:i] ]
-                                      widths:@[ @(kLandBtnW), @(kLandBtnW), @(kLandPMW) ]];
+                                        tail:@[ [self vColumn:@[ _cdToggle[i], _cdReset[i] ]],
+                                                [self vColumn:@[ _cdPlusBtn[i], _cdMinusBtn[i] ]] ]
+                                      widths:@[ @(kLandBtnW), @(kLandPMW) ]];
         return [self wrapCard:content tag:100 + i];
     }
 
@@ -785,7 +805,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     _swValue[i].textColor = _swRunning[i] ? [UIColor whiteColor] : [self dimColor];
     // Title: "Count up started at XX:XX" while running, else just "Count up".
     _swTitle[i].text = _swRunning[i]
-        ? [NSString stringWithFormat:@"Started at %@", _swStartStr[i]]
+        ? [NSString stringWithFormat:@"Started %@", _swStartStr[i]]
         : @"Count up";
     // Reset only matters once it's running or has counted something.
     _swReset[i].hidden = (!_swRunning[i] && _swSeconds[i] == 0);
@@ -804,7 +824,8 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     // ETA = now + time remaining (recomputed each tick so +/- adjustments move it).
     if (_cdRunning[i]) {
         NSDate *eta = [NSDate dateWithTimeIntervalSinceNow:_cdRemaining[i]];
-        _cdTitle[i].text = [NSString stringWithFormat:@"Started at %@, ETA %@",
+        // Explicit 2-line layout so the ETA always shows (it doesn't fit one line on a phone card).
+        _cdTitle[i].text = [NSString stringWithFormat:@"Started %@\nETA %@",
                             _cdStartStr[i], [_clockFmt stringFromDate:eta]];
     } else {
         _cdTitle[i].text = @"Count down";
@@ -933,16 +954,17 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     _entryDisplay.minimumScaleFactor = 0.3;
     [_entryDisplay setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisVertical];
 
-    // 4x4 of digits + ':' '.' and hours/minutes/seconds units + backspace.
+    // 4x4 of digits + ':' '.' and hours/mins/secs units + backspace (abbreviated so they fit).
     NSArray *rows = @[ @[ @"7", @"8", @"9", @"hours" ],
-                       @[ @"4", @"5", @"6", @"minutes" ],
-                       @[ @"1", @"2", @"3", @"seconds" ],
+                       @[ @"4", @"5", @"6", @"mins" ],
+                       @[ @"1", @"2", @"3", @"secs" ],
                        @[ @".", @"0", @":", @"⌫" ] ];   // ⌫
     UIStackView *grid = [[UIStackView alloc] init];
     grid.axis = UILayoutConstraintAxisVertical;
     grid.distribution = UIStackViewDistributionFillEqually;
     grid.spacing = 12;
     NSMutableArray *units = [NSMutableArray array];
+    _digitKeys = [NSMutableArray array];
     for (NSArray *row in rows) {
         UIStackView *r = [[UIStackView alloc] init];
         r.axis = UILayoutConstraintAxisHorizontal;
@@ -950,17 +972,20 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
         r.spacing = 12;
         for (NSString *k in row) {
             UIButton *key = [self keypadKey:k];
-            if ([k isEqualToString:@"hours"] || [k isEqualToString:@"minutes"] || [k isEqualToString:@"seconds"])
+            if ([k isEqualToString:@"hours"] || [k isEqualToString:@"mins"] || [k isEqualToString:@"secs"])
                 [units addObject:key];
+            else
+                [_digitKeys addObject:key];
             [r addArrangedSubview:key];
         }
         [grid addArrangedSubview:r];
     }
     _unitKeys = units;
-    [self updateKeypadUnitFont];   // size them for the current orientation
 
     UIButton *cancel = [self keypadActionButton:@"Cancel" color:[self grayColor]  action:@selector(keypadCancel)];
     UIButton *done   = [self keypadActionButton:@"Done"   color:[self greenColor] action:@selector(keypadDone)];
+    _kpActions = @[ cancel, done ];
+    [self updateKeypadUnitFont];   // size everything for the current orientation
     UIStackView *bottom = [[UIStackView alloc] initWithArrangedSubviews:@[ cancel, done ]];
     bottom.axis = UILayoutConstraintAxisHorizontal;
     bottom.distribution = UIStackViewDistributionFillEqually;
@@ -971,8 +996,15 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     outer.axis = UILayoutConstraintAxisVertical;
     outer.spacing = 20;
     outer.translatesAutoresizingMaskIntoConstraints = NO;
+    _kpOuter = outer;
     [_keypad addSubview:outer];
 
+    // Keep the entry display, action row and margins short in landscape or they eat the whole
+    // (short) height and crush the key grid; sized per orientation in updateKeypadUnitFont.
+    _kpTop     = [outer.topAnchor constraintEqualToAnchor:_keypad.topAnchor constant:40];
+    _kpBottom  = [outer.bottomAnchor constraintEqualToAnchor:_keypad.bottomAnchor constant:-40];
+    _kpDisplayH = [_entryDisplay.heightAnchor constraintEqualToConstant:140];
+    _kpBottomH  = [bottom.heightAnchor constraintEqualToConstant:104];
     [NSLayoutConstraint activateConstraints:@[
         [_keypad.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [_keypad.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
@@ -980,11 +1012,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
         [_keypad.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
         [outer.leadingAnchor constraintEqualToAnchor:_keypad.leadingAnchor constant:48],
         [outer.trailingAnchor constraintEqualToAnchor:_keypad.trailingAnchor constant:-48],
-        [outer.topAnchor constraintEqualToAnchor:_keypad.topAnchor constant:40],
-        [outer.bottomAnchor constraintEqualToAnchor:_keypad.bottomAnchor constant:-40],
-        // Fixed display + short bottom-row height so the key grid gets most of the screen.
-        [_entryDisplay.heightAnchor constraintEqualToConstant:140],
-        [bottom.heightAnchor constraintEqualToConstant:104],
+        _kpTop, _kpBottom, _kpDisplayH, _kpBottomH,
     ]];
 }
 
@@ -994,6 +1022,9 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     [b setTitle:title forState:UIControlStateNormal];
     [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     b.titleLabel.font = [UIFont systemFontOfSize:48 weight:UIFontWeightSemibold];
+    b.titleLabel.adjustsFontSizeToFitWidth = YES;   // so "Cancel" isn't truncated
+    b.titleLabel.minimumScaleFactor = 0.5;
+    b.titleLabel.numberOfLines = 1;
     b.backgroundColor = c;
     b.layer.cornerRadius = 12;
     [b addTarget:self action:a forControlEvents:UIControlEventTouchUpInside];
@@ -1006,19 +1037,35 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     [b setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     b.titleLabel.font = [UIFont systemFontOfSize:44 weight:UIFontWeightSemibold];
     b.titleLabel.adjustsFontSizeToFitWidth = YES;   // so "minutes"/"seconds" fit
-    b.titleLabel.minimumScaleFactor = 0.4;
+    b.titleLabel.minimumScaleFactor = 0.3;
+    b.titleLabel.numberOfLines = 1;
+    b.titleLabel.lineBreakMode = NSLineBreakByClipping;
     b.backgroundColor = [UIColor colorWithWhite:0.18 alpha:1.0];
     b.layer.cornerRadius = 12;
     [b addTarget:self action:@selector(keypadKeyTapped:) forControlEvents:UIControlEventTouchUpInside];
     return b;
 }
 
-// hours/minutes/seconds keys: 30% smaller font in landscape (44 -> ~31), full size portrait.
+// Size the keypad per orientation. In landscape the screen is short, so the entry display,
+// action row and margins shrink (else they crush the 4-row key grid to nothing) and the
+// hours/minutes/seconds keys use a smaller font.
 - (void)updateKeypadUnitFont {
     BOOL landscape = self.view.bounds.size.width > self.view.bounds.size.height;
-    CGFloat size = landscape ? 31.0 : 44.0;
-    for (UIButton *b in _unitKeys)
-        b.titleLabel.font = [UIFont systemFontOfSize:size weight:UIFontWeightSemibold];
+    // Portrait keypad text is 20% smaller than landscape's base sizes. "hours/minutes/seconds"
+    // share a narrow 4th column, so they stay small enough to fit the whole word.
+    CGFloat f = landscape ? 1.0 : 0.8;
+    for (UIButton *b in _digitKeys)
+        b.titleLabel.font = [UIFont systemFontOfSize:44.0 * f weight:UIFontWeightSemibold];
+    for (UIButton *b in _unitKeys)   // hours/mins/secs a further 20% smaller (26 -> ~21)
+        b.titleLabel.font = [UIFont systemFontOfSize:21.0 * f weight:UIFontWeightSemibold];
+    for (UIButton *b in _kpActions)
+        b.titleLabel.font = [UIFont systemFontOfSize:48.0 * f weight:UIFontWeightSemibold];
+    _entryDisplay.font = [UIFont monospacedDigitSystemFontOfSize:(landscape ? 56.0 : 96.0 * 0.8) weight:UIFontWeightBold];
+    _kpDisplayH.constant = landscape ? 68 : 140;
+    _kpBottomH.constant  = landscape ? 60 : 104;
+    _kpTop.constant      = landscape ? 16 : 40;
+    _kpBottom.constant   = landscape ? -16 : -40;
+    _kpOuter.spacing     = landscape ? 10 : 20;
 }
 
 - (void)keypadKeyTapped:(UIButton *)b {
@@ -1027,9 +1074,9 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     if ([k isEqualToString:@"⌫"]) {                          // backspace
         if (_entryText.length > 0)
             [_entryText deleteCharactersInRange:NSMakeRange(_entryText.length - 1, 1)];
-    } else if ([k isEqualToString:@"hours"])   { [_entryText appendString:@"h"]; }
-    else if   ([k isEqualToString:@"minutes"]) { [_entryText appendString:@"m"]; }
-    else if   ([k isEqualToString:@"seconds"]) { [_entryText appendString:@"s"]; }
+    } else if ([k isEqualToString:@"hours"]) { [_entryText appendString:@"h"]; }
+    else if   ([k isEqualToString:@"mins"])  { [_entryText appendString:@"m"]; }
+    else if   ([k isEqualToString:@"secs"])  { [_entryText appendString:@"s"]; }
     else { [_entryText appendString:k]; }                    // digit, '.', or ':'
     [self refreshEntryDisplay];
 }
