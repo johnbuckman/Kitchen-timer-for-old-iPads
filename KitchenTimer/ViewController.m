@@ -824,8 +824,11 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     // ETA = now + time remaining (recomputed each tick so +/- adjustments move it).
     if (_cdRunning[i]) {
         NSDate *eta = [NSDate dateWithTimeIntervalSinceNow:_cdRemaining[i]];
-        // Explicit 2-line layout so the ETA always shows (it doesn't fit one line on a phone card).
-        _cdTitle[i].text = [NSString stringWithFormat:@"Started %@\nETA %@",
+        // Two lines on the narrow (compact / phone-landscape) cards so the ETA always fits. The
+        // wide iPad-landscape card has room for one line but not two: there a 2nd line was
+        // squeezed out by the big number and buttons, hiding the ETA, so keep it on one line.
+        BOOL wide = !self.compact && !self.phoneLandscape;
+        _cdTitle[i].text = [NSString stringWithFormat:(wide ? @"Started %@  ·  ETA %@" : @"Started %@\nETA %@"),
                             _cdStartStr[i], [_clockFmt stringFromDate:eta]];
     } else {
         _cdTitle[i].text = @"Count down";
