@@ -6,6 +6,7 @@
 #define DING_SOUND 1005   // "nice ding" alert tone (try 1013 / 1057 'Tink' to taste)
 #define DING_EVERY 5      // re-ding every N seconds while in overtime
 #define IDLE_LIMIT 3600        // seconds of no interaction before the screensaver shows (1 hour)
+#define STATE_KEY @"timerState"  // NSUserDefaults key for the crash-recovery snapshot
 
 @interface ViewController () <UIGestureRecognizerDelegate>
 {
@@ -74,6 +75,10 @@
     int      _ssSeconds;   // seconds the screensaver has been showing
     int      _ssShiftIndex;// which vertical offset we're on
     NSDateFormatter *_dayFmt;
+
+    // Crash / kill recovery: the snapshot found at launch, while we ask whether to resume it.
+    // Saving is paused while it's pending so a second crash during the alert doesn't lose it.
+    NSDictionary *_pendingRestore;
 }
 @end
 
@@ -99,6 +104,10 @@
     [self buildUI];
     [self refreshAll];
 
+    // If the app was killed or crashed with a timer running, offer to resume (in viewDidAppear).
+    NSDictionary *saved = [[NSUserDefaults standardUserDefaults] dictionaryForKey:STATE_KEY];
+    if ([self snapshotHasRunningTimer:saved]) _pendingRestore = saved;
+
     _master = [NSTimer scheduledTimerWithTimeInterval:1.0
                                                target:self
                                              selector:@selector(tick)
@@ -107,7 +116,113 @@
     [[NSRunLoop currentRunLoop] addTimer:_master forMode:NSRunLoopCommonModes];
 }
 
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    if (_pendingRestore && !self.presentedViewController) [self offerRestore];
+}
+
 - (BOOL)prefersStatusBarHidden { return YES; }
+
+#pragma mark - Crash / kill recovery
+
+// Snapshot of every timer, saved each tick and after every change, so that if the app is
+// killed or crashes the running timers can be resumed on the next launch. iOS gives no
+// callback on a crash or a swipe-away kill, so the snapshot must always be current.
+- (void)saveState {
+    if (_pendingRestore) return;   // don't overwrite the snapshot we're offering to restore
+    NSMutableArray *sw = [NSMutableArray array], *cd = [NSMutableArray array];
+    for (int i = 0; i < NCOUNT; i++) {
+        [sw addObject:@{ @"sec": @(_swSeconds[i]), @"run": @(_swRunning[i]),
+                         @"start": _swStartStr[i] ?: @"" }];
+        [cd addObject:@{ @"rem": @(_cdRemaining[i]), @"set": @(_cdSetSec[i]),
+                         @"run": @(_cdRunning[i]), @"start": _cdStartStr[i] ?: @"",
+                         @"startDur": @(_cdStartDurSec[i]) }];
+    }
+    [[NSUserDefaults standardUserDefaults] setObject:@{ @"savedAt": @([NSDate date].timeIntervalSince1970),
+                                                         @"sw": sw, @"cd": cd }
+                                              forKey:STATE_KEY];
+}
+
+- (BOOL)snapshotHasRunningTimer:(NSDictionary *)st {
+    if (![st isKindOfClass:[NSDictionary class]]) return NO;
+    for (NSString *k in @[@"sw", @"cd"]) {
+        NSArray *a = st[k];
+        if (![a isKindOfClass:[NSArray class]]) continue;
+        for (NSDictionary *t in a)
+            if ([t isKindOfClass:[NSDictionary class]] && [t[@"run"] boolValue]) return YES;
+    }
+    return NO;
+}
+
+// Seconds between the snapshot and now: time the app was dead, which running timers
+// must make up (the food kept cooking). Never negative, even if the clock went backwards.
+- (int)snapshotGap:(NSDictionary *)st {
+    double gap = [NSDate date].timeIntervalSince1970 - [st[@"savedAt"] doubleValue];
+    return gap > 0 ? (int)gap : 0;
+}
+
+- (void)offerRestore {
+    NSDictionary *st = _pendingRestore;
+    int gap = [self snapshotGap:st];
+    NSMutableArray *lines = [NSMutableArray array];
+    NSArray *sw = st[@"sw"], *cd = st[@"cd"];
+    for (int i = 0; i < NCOUNT && i < (int)sw.count; i++) {
+        NSDictionary *t = sw[i];
+        if (![t[@"run"] boolValue]) continue;
+        [lines addObject:[NSString stringWithFormat:@"Count up %d: %@ (started %@)", i + 1,
+                          [self mmss:[t[@"sec"] intValue] + gap], t[@"start"]]];
+    }
+    for (int i = 0; i < NCOUNT && i < (int)cd.count; i++) {
+        NSDictionary *t = cd[i];
+        if (![t[@"run"] boolValue]) continue;
+        int rem = [t[@"rem"] intValue] - gap;
+        [lines addObject:[NSString stringWithFormat:@"Count down %d: %@ (started %@)", i + 1,
+                          rem > 0 ? [NSString stringWithFormat:@"%@ left", [self mmss:rem]]
+                                  : [NSString stringWithFormat:@"%@ overtime", [self mmss:-rem]],
+                          t[@"start"]]];
+    }
+    UIAlertController *a = [UIAlertController
+        alertControllerWithTitle:@"Continue your timers?"
+                         message:[lines componentsJoinedByString:@"\n"]
+                  preferredStyle:UIAlertControllerStyleAlert];
+    [a addAction:[UIAlertAction actionWithTitle:@"Discard" style:UIAlertActionStyleDestructive
+                                        handler:^(UIAlertAction *x) { [self finishRestore:NO]; }]];
+    UIAlertAction *go = [UIAlertAction actionWithTitle:@"Continue" style:UIAlertActionStyleDefault
+                                               handler:^(UIAlertAction *x) { [self finishRestore:YES]; }];
+    [a addAction:go];
+    if ([a respondsToSelector:@selector(setPreferredAction:)]) a.preferredAction = go;  // iOS 9+
+    [self presentViewController:a animated:YES completion:nil];
+}
+
+// Continue: put every timer back as it was (stopped ones too) and add the time the app was
+// gone to the running ones, so a countdown that ran out comes back in overtime.
+// Discard: keep the fresh state the app launched with.
+- (void)finishRestore:(BOOL)resume {
+    NSDictionary *st = _pendingRestore;
+    _pendingRestore = nil;
+    if (resume) {
+        int gap = [self snapshotGap:st];   // measured at tap time, not when the alert appeared
+        NSArray *sw = st[@"sw"], *cd = st[@"cd"];
+        for (int i = 0; i < NCOUNT && i < (int)sw.count; i++) {
+            NSDictionary *t = sw[i];
+            _swRunning[i]  = [t[@"run"] boolValue];
+            _swSeconds[i]  = [t[@"sec"] intValue] + (_swRunning[i] ? gap : 0);
+            _swStartStr[i] = [t[@"start"] length] ? t[@"start"] : nil;
+        }
+        for (int i = 0; i < NCOUNT && i < (int)cd.count; i++) {
+            NSDictionary *t = cd[i];
+            _cdRunning[i]     = [t[@"run"] boolValue];
+            _cdSetSec[i]      = [t[@"set"] intValue];
+            _cdRemaining[i]   = [t[@"rem"] intValue] - (_cdRunning[i] ? gap : 0);
+            _cdStartStr[i]    = [t[@"start"] length] ? t[@"start"] : nil;
+            _cdStartDurSec[i] = [t[@"startDur"] intValue];
+        }
+        [self refreshAll];
+        [self updatePulse];
+    }
+    [self resetIdle];
+    [self saveState];
+}
 
 // iPhone (compact) gets a smaller clock + tighter margins so the timer grid has room.
 // Catalyst/iPad report Pad/Mac, so they keep the original large layout.
@@ -120,6 +235,21 @@
 // used everywhere EXCEPT iPad-landscape, which keeps the roomy inline layout. So: any phone
 // orientation, plus iPad portrait.
 - (BOOL)compact { return self.isPhone || !self.landscape; }
+
+// Layout edges: the safe area on phone (camera cutout / home indicator), raw view edges on
+// iPad/Catalyst. Safe-area APIs are iOS 11+, so the iOS 9 armv7 build (iPad only) compiles
+// them out and always uses the raw edges.
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
+- (NSLayoutXAxisAnchor *)edgeLead  { return self.isPhone ? self.view.safeAreaLayoutGuide.leadingAnchor  : self.view.leadingAnchor; }
+- (NSLayoutXAxisAnchor *)edgeTrail { return self.isPhone ? self.view.safeAreaLayoutGuide.trailingAnchor : self.view.trailingAnchor; }
+- (NSLayoutYAxisAnchor *)edgeTop   { return self.isPhone ? self.view.safeAreaLayoutGuide.topAnchor      : self.view.topAnchor; }
+- (UIEdgeInsets)safeInsets         { return self.isPhone ? self.view.safeAreaInsets : UIEdgeInsetsZero; }
+#else
+- (NSLayoutXAxisAnchor *)edgeLead  { return self.view.leadingAnchor; }
+- (NSLayoutXAxisAnchor *)edgeTrail { return self.view.trailingAnchor; }
+- (NSLayoutYAxisAnchor *)edgeTop   { return self.view.topAnchor; }
+- (UIEdgeInsets)safeInsets         { return UIEdgeInsetsZero; }
+#endif
 
 // Per-orientation tweak: the clock + weekday sizes.
 - (void)viewWillLayoutSubviews {
@@ -165,8 +295,8 @@
     BOOL portrait = self.view.bounds.size.height >= self.view.bounds.size.width;
     // Respect the safe area on phone — the clock row hangs off safeArea.top, so the grid must
     // subtract those insets or the bottom row spills off under the home indicator/cutout.
-    CGFloat topPad = 24 + (phone ? self.view.safeAreaInsets.top : 0);
-    CGFloat botPad = 24 + (phone ? self.view.safeAreaInsets.bottom : 0);
+    CGFloat topPad = 24 + (phone ? self.safeInsets.top : 0);
+    CGFloat botPad = 24 + (phone ? self.safeInsets.bottom : 0);
     CGFloat avail = self.view.bounds.size.height - topPad - botPad;
     CGFloat clockH = CGRectGetHeight(_clockRow.frame);
     CGFloat rowH = (avail - clockH - 18 - 18) / 2.0;            // two 18pt gaps
@@ -251,10 +381,10 @@
     // Clock row position (built once). On phone, hang it off the safe-area top so it clears the
     // camera cutout; the sides use the safe area too so cards don't slide under the cutout in
     // landscape. iPad/Catalyst have no cutout so use the raw edges.
-    NSLayoutXAxisAnchor *clead  = self.isPhone ? self.view.safeAreaLayoutGuide.leadingAnchor  : self.view.leadingAnchor;
-    NSLayoutXAxisAnchor *ctrail = self.isPhone ? self.view.safeAreaLayoutGuide.trailingAnchor : self.view.trailingAnchor;
+    NSLayoutXAxisAnchor *clead  = self.edgeLead;
+    NSLayoutXAxisAnchor *ctrail = self.edgeTrail;
     [NSLayoutConstraint activateConstraints:@[
-        [_clockRow.topAnchor constraintEqualToAnchor:(self.isPhone ? self.view.safeAreaLayoutGuide.topAnchor : self.view.topAnchor) constant:24],
+        [_clockRow.topAnchor constraintEqualToAnchor:self.edgeTop constant:24],
         [_clockRow.leadingAnchor constraintEqualToAnchor:clead constant:28],
         [_clockRow.trailingAnchor constraintEqualToAnchor:ctrail constant:-28],
     ]];
@@ -278,8 +408,8 @@
     [self.view addSubview:_topRow];
     [self.view addSubview:_botRow];
 
-    NSLayoutXAxisAnchor *lead  = self.isPhone ? self.view.safeAreaLayoutGuide.leadingAnchor  : self.view.leadingAnchor;
-    NSLayoutXAxisAnchor *trail = self.isPhone ? self.view.safeAreaLayoutGuide.trailingAnchor : self.view.trailingAnchor;
+    NSLayoutXAxisAnchor *lead  = self.edgeLead;
+    NSLayoutXAxisAnchor *trail = self.edgeTrail;
     _topRowH = [_topRow.heightAnchor constraintEqualToConstant:200];
     _botRowH = [_botRow.heightAnchor constraintEqualToConstant:200];
     _gridConstraints = @[
@@ -656,6 +786,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
         }
     }
     [self updatePulse];
+    [self saveState];
 
     // --- idle / screensaver ---
     _idleSeconds++;
@@ -691,6 +822,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     [b setTitle:(_swRunning[i] ? @"Stop" : @"Up") forState:UIControlStateNormal];
     b.backgroundColor = _swRunning[i] ? [self redColor] : [self greenColor];
     [self refreshStopwatch:i];   // updates the title + show/hide Reset right away
+    [self saveState];
 }
 
 - (void)swReset:(UIButton *)b {
@@ -701,6 +833,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     [_swToggle[i] setTitle:@"Up" forState:UIControlStateNormal];
     _swToggle[i].backgroundColor = [self greenColor];
     [self refreshStopwatch:i];
+    [self saveState];
 }
 
 #pragma mark - Countdown actions
@@ -721,6 +854,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     if (_cdRemaining[i] > CD_MAX_MIN * 60) _cdRemaining[i] = CD_MAX_MIN * 60;
     [self refreshCountdown:i];
     [self updatePulse];
+    [self saveState];
 }
 
 // TouchDown on +/-: one immediate ±1, then start auto-repeat (kicks into fast mode if held).
@@ -770,6 +904,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     }
     [self refreshCountdown:i];   // show/hide Reset right away
     [self updatePulse];   // stopping an overtime countdown should end the flash at once
+    [self saveState];
 }
 
 - (void)cdReset:(UIButton *)b {
@@ -781,6 +916,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
     _cdToggle[i].backgroundColor = [self blueColor];
     [self refreshCountdown:i];
     [self updatePulse];   // reset clears overtime -> end the flash
+    [self saveState];
 }
 
 #pragma mark - Display
@@ -1105,6 +1241,7 @@ static const CGFloat kLandBtnW = 88, kLandWideW = 132, kLandPMW = 62;
         _swSeconds[_keypadIndex] = secs;
         [self refreshStopwatch:_keypadIndex];
     }
+    [self saveState];
     [self hideKeypad];
 }
 
